@@ -1,6 +1,6 @@
 {
     "name": "octo/articles",
-    "description": "Articles module for Octo CMS",
+    "description": "Articles block type for Octo CMS",
     "minimum-stability": "dev",
     "type"             : "library",
     "keywords"         : ["php", "cms", "octo", "content management", "content management system", "articles"],
@@ -18,7 +18,7 @@
 
     "require": {
         "octo/media": "dev-master",
-        "octo/categories": "dev-master"
+        "octo/pages": "dev-master"
     },
 
     "autoload": {

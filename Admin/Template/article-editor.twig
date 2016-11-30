@@ -1,0 +1,229 @@
+<div class="row" style="margin: 40px 0;" id="article_{{ content.id }}">
+    <div class="article-editor" data-content-id="{{ content.id }}">
+        <form id="block_{{ content.id }}"></form>
+
+        <div class="col-lg-3">
+            <button style="display: block; width: 100%; text-align: left; margin-bottom: 20px;" class="article-insert-text btn btn-lg btn-default">
+                <i class="fa fa-file-text-o" style="margin-right: 20px"></i> Insert Text
+            </button>
+
+            <button style="display: block; width: 100%; text-align: left; margin-bottom: 20px;" class="article-insert-image btn btn-lg btn-default">
+                <i class="fa fa-file-image-o" style="margin-right: 20px"></i> Insert Image
+            </button>
+
+            <!-- button id="article-insert-video" style="display: block; width: 100%; text-align: left; margin-bottom: 20px;" class="btn btn-lg btn-default">
+                <i class="fa fa-file-movie-o" style="margin-right: 20px"></i> Insert Video
+            </button -->
+        </div>
+
+        <div class="col-lg-9">
+            <div class="article-items">
+                {% for item in content.content %}
+                    <div class="article-item content-type-{{ item.type }}" data-type="{{ item.type }}">
+                        {% if item.type == 'text' %}
+                            <div class="article-content" contenteditable="true" style="outline: none;">{{ item.html|raw }}</div>
+                        {% elseif item.type == 'image' %}
+                            <select><option value="{{ item.id }}"></option></select>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" type="text/css" href="/asset/css/site/ckeditor">
+<style>
+
+    .article-item {
+        border: 1px solid #fff;
+        border-radius: 4px;
+        position: relative;
+        min-height: 100px;
+        padding: 15px 120px 15px 15px;
+    }
+
+        .article-item:hover {
+            border: 1px solid #f0f0f0;
+        }
+
+        .article-item .actions {
+            display: none;
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border: 0;
+            border-radius: 4px;
+            border-top-left-radius: 0;
+            border-bottom-right-radius: 0;
+
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+
+            .article-item .actions .btn {
+                margin-left: 5px;
+                z-index: 100000;
+            }
+
+    .article-item .actions .handle {
+        cursor: move;
+        margin-left: 7px;
+        padding: 5px;
+    }
+
+    .article-item .actions .delete {
+        cursor: pointer;
+    }
+
+            .article-item:hover .actions {
+                display: block;
+            }
+
+
+</style>
+
+<script>
+
+    if (window.location.hash) {
+        $('.tab-pane').removeClass('active');
+        $(window.location.hash).addClass('active');
+    }
+
+    var articleEditor = Class.extend({
+        id: null,
+        editor: null,
+        items: null,
+        pageEditor: null,
+
+        init: function (pageEditor, editor) {
+            this.editor = editor;
+            this.items = this.editor.find('.article-items');
+            this.id = this.editor.data('content-id');
+            this.pageEditor = pageEditor;
+
+            console.log(this.pageEditor.content);
+
+            this.initButtons();
+            this.initEditors();
+        },
+
+        initEditors: function () {
+            var self = this;
+
+            self.editor.find('.content-type-text div.article-content').each(function () {
+                var $editor = $(this);
+                $editor.ckeditor(window.smallCkEditor);
+            });
+
+            self.editor.find('.content-type-image select').each(function () {
+                Octo.Forms.createImagePicker($(this), true);
+
+                $(this).on('change', function () {
+                    self.save();
+                });
+            });
+
+            self.editor.find('.article-item').each(function () {
+                var $item = $(this);
+
+                if ($item.find('.actions').length == 0) {
+                    var $actions = $('<div class="actions"></div>');
+                    var $delete = $('<button class="btn btn-default btn-sm delete"><i class="fa fa-trash"></i></button>');
+                    var $handle = $('<i class="fa fa-arrows handle"></i>');
+
+                    $actions.append($delete);
+                    $actions.append($handle);
+                    $item.prepend($actions);
+
+                    $delete.on('click', function () {
+                        if (confirm('Are you sure you want to delete this section?')) {
+                            $item.fadeOut(function () {
+                                $item.remove();
+                                self.save();
+                            });
+                        }
+                    });
+                }
+            });
+
+            self.items.sortable({
+                axis: 'y',
+                //containment: 'parent',
+                items: '.article-item',
+                //helper: fixHelper,
+                handle: '.handle',
+                update: function () {
+                    self.save();
+                }
+            });
+        },
+
+        initButtons: function () {
+            var self = this;
+
+            self.editor.find('.article-insert-text').on('click', function (e) {
+                e.preventDefault();
+                var $editor = $('<div class="article-content" contenteditable="true" style="outline: none;">Your text content goes here.</div>');
+                self.addArticleItem('text', $editor);
+            });
+
+            self.editor.find('.article-insert-image').on('click', function (e) {
+                e.preventDefault();
+                var $editor = $('<select name="content[]"></select>');
+                self.addArticleItem('image', $editor);
+            });
+        },
+
+        addArticleItem: function (type, $editor) {
+            var self = this;
+
+            var $item = $('<div class="article-item content-type-'+type+'" data-type="'+type+'"></div>');
+            $item.append($editor);
+            self.items.append($item);
+
+            self.initEditors();
+        },
+
+        save: function () {
+            var self = this;
+            var content = {};
+
+            self.items.find('.article-item').each(function (idx) {
+                var $el = $(this);
+                var type = $el.data('type');
+
+                content[idx] = {
+                    type: type
+                };
+
+                switch (type) {
+                    case 'image':
+                        content[idx].id = $el.find('select').val();
+                        break;
+
+                    case 'text':
+                        content[idx].html = $el.find('.article-content').html();
+                        break;
+                }
+            });
+
+            self.pageEditor.setContent(self.id, content);
+            self.pageEditor.saveContent();
+        }
+    });
+
+
+    $('.page-editor').on('ready.octo', function (e, args) {
+        var pageEditor = args.editor;
+
+        $('.article-editor').each(function () {
+            var ed = new articleEditor(pageEditor, $(this));
+        });
+    });
+
+
+
+
+
+</script>

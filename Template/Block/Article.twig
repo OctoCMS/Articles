@@ -1,0 +1,11 @@
+<div class="article">
+{% for item in content %}
+
+    {% if item.type == 'text' %}
+        <div class="article-text">{{ item.html|raw }}</div>
+    {% elseif item.type == 'image' %}
+        <img class="article-image img-responsive" src="/media/render/{{ item.id }}">
+    {% endif %}
+
+{% endfor %}
+</div>
